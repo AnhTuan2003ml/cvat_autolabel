@@ -52,6 +52,7 @@ export interface AnnotateTaskRequestBody {
     conv_mask_to_poly: boolean;
     threshold?: number;
     roi?: [number, number, number, number];
+    text_prompts?: string[];
 }
 
 function convertMappingToServer(mapping: FullMapping): ServerMapping {
@@ -88,16 +89,19 @@ function DetectorRunner(props: Props): JSX.Element {
     const [detectorThreshold, setDetectorThreshold] = useState<number | null>(null);
     const [modelLabels, setModelLabels] = useState<LabelInterface[]>([]);
     const [taskLabels, setTaskLabels] = useState<LabelInterface[]>([]);
+    const [textPrompts, setTextPrompts] = useState<string[]>([]);
     const [regionOfInterest, setRegionOfInterest] = useState<RegionOfInterest>(null);
 
     const model = models.find((_model): boolean => _model.id === modelID);
     const isDetector = model?.kind === ModelKind.DETECTOR;
+    const isDynamicDetector = isDetector && model?.dynamicLabels === true;
     const isReId = model?.kind === ModelKind.REID;
     const showROI = isDetector && dimension === DimensionType.DIMENSION_2D;
     const convertMasks2PolygonVisible = isDetector &&
         [LabelType.ANY, LabelType.MASK].includes(model.returnType);
+    const promptLabels = taskLabels.filter((label) => [LabelType.RECTANGLE, LabelType.ANY].includes(label.type));
 
-    const buttonEnabled = model && (isReId || (isDetector && mapping.length));
+    const buttonEnabled = model && (isReId || (isDynamicDetector ? textPrompts.length > 0 : isDetector && mapping.length));
 
     useEffect(() => {
         const converted = labels.map((label) => ({
@@ -122,6 +126,13 @@ function DetectorRunner(props: Props): JSX.Element {
         }));
 
         setTaskLabels(converted);
+        if (model?.dynamicLabels) {
+            setTextPrompts(converted
+                .filter((label) => [LabelType.RECTANGLE, LabelType.ANY].includes(label.type))
+                .map((label) => label.name));
+        } else {
+            setTextPrompts([]);
+        }
         if (model) {
             setModelLabels(model.labels);
             if (!model.labels.length && model.kind !== ModelKind.REID) {
@@ -172,7 +183,7 @@ function DetectorRunner(props: Props): JSX.Element {
                     </Select>
                 </Col>
             </Row>
-            {isDetector && (
+            {isDetector && !isDynamicDetector && (
                 <div>
                     <div className='cvat-detector-runner-mapping-header'>
                         <Text>Setup mapping between labels and attributes</Text>
@@ -185,6 +196,20 @@ function DetectorRunner(props: Props): JSX.Element {
                         onUpdateMapping={(_mapping: FullMapping) => setMapping(_mapping)}
                         modelLabels={modelLabels}
                         taskLabels={taskLabels}
+                    />
+                </div>
+            )}
+            {isDynamicDetector && (
+                <div>
+                    <div className='cvat-detector-runner-mapping-header'>
+                        <Text>YOLOE text prompts</Text>
+                    </div>
+                    <Select
+                        mode='multiple'
+                        value={textPrompts}
+                        style={{ width: '100%' }}
+                        onChange={(values: string[]) => setTextPrompts(values)}
+                        options={promptLabels.map((label) => ({ label: label.name, value: label.name }))}
                     />
                 </div>
             )}
@@ -290,7 +315,11 @@ function DetectorRunner(props: Props): JSX.Element {
                         type='primary'
                         onClick={() => {
                             if (!model) return;
-                            const serverMapping = convertMappingToServer(mapping);
+                            const serverMapping = isDynamicDetector ?
+                                Object.fromEntries(textPrompts.map((prompt) => [prompt, {
+                                    name: prompt,
+                                    attributes: {},
+                                }])) : convertMappingToServer(mapping);
                             if (model.kind === ModelKind.DETECTOR) {
                                 const body: AnnotateTaskRequestBody = {
                                     type: 'annotate_task',
@@ -299,6 +328,7 @@ function DetectorRunner(props: Props): JSX.Element {
                                     conv_mask_to_poly: convertMasksToPolygons,
                                     ...(detectorThreshold !== null ? { threshold: detectorThreshold } : {}),
                                     ...(regionOfInterest ? { roi: regionOfInterest } : {}),
+                                    ...(isDynamicDetector ? { text_prompts: textPrompts } : {}),
                                 };
 
                                 runInference(model, body);

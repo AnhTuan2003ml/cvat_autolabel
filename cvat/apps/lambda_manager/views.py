@@ -252,6 +252,7 @@ class LambdaFunction:
         self.animated_gif = meta_anno.get("animated_gif", "")
         self.version = int(meta_anno.get("version", "1"))
         self.help_message = meta_anno.get("help_message", "")
+        self.dynamic_labels = meta_anno.get("dynamic_labels", "false").lower() == "true"
         self.gateway = gateway
 
         if "supported_shape_types" in meta_anno:
@@ -279,6 +280,9 @@ class LambdaFunction:
             "name": self.name,
             "version": self.version,
         }
+
+        if self.dynamic_labels:
+            response["dynamic_labels"] = True
 
         if self.kind is FunctionKind.INTERACTOR:
             response.update(
@@ -333,11 +337,29 @@ class LambdaFunction:
         if threshold:
             payload.update({"threshold": threshold})
         mapping = data.get("mapping", {})
+        text_prompts = data.get("text_prompts", [])
         requested_roi = data.get("roi")
         roi = None
 
         model_labels = self.labels
         task_labels = db_task.get_labels(prefetch=True)
+
+        if self.dynamic_labels:
+            prompt_names = text_prompts or list(mapping)
+            if not prompt_names:
+                raise ValidationError("At least one YOLOE text prompt is required")
+            if len(prompt_names) != len(set(prompt_names)):
+                raise ValidationError("YOLOE text prompts must be unique")
+            model_labels = [
+                {"name": prompt_name, "type": "rectangle", "attributes": []}
+                for prompt_name in prompt_names
+            ]
+            if not mapping:
+                mapping = {
+                    prompt_name: {"name": prompt_name, "attributes": {}}
+                    for prompt_name in prompt_names
+                }
+            payload["text_prompts"] = prompt_names
 
         def labels_compatible(model_label: dict, task_label: Label) -> bool:
             model_type = model_label["type"]
@@ -454,9 +476,9 @@ class LambdaFunction:
         if not mapping:
             mapping = make_default_mapping(model_labels, task_labels)
         else:
-            validate_labels_mapping(mapping, self.labels, task_labels)
+            validate_labels_mapping(mapping, model_labels, task_labels)
 
-        mapping = update_mapping(mapping, self.labels, task_labels)
+        mapping = update_mapping(mapping, model_labels, task_labels)
 
         # Check job frame boundaries
         if db_job:

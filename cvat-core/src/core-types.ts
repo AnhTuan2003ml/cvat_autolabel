@@ -53,6 +53,7 @@ export interface SerializedModel {
     startswith_box_optional?: boolean;
     created_date?: string;
     updated_date?: string;
+    dynamic_labels?: boolean;
 }
 
 export interface UpdateStatusData {

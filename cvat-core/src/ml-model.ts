@@ -30,6 +30,10 @@ export default class MLModel {
         return Array.isArray(this.serialized.labels_v2) ? [...this.serialized.labels_v2] : [];
     }
 
+    public get dynamicLabels(): boolean {
+        return this.serialized.dynamic_labels === true;
+    }
+
     public get supportedShapeTypes(): ShapeType[] | undefined {
         return this.serialized.supported_shape_types;
     }
