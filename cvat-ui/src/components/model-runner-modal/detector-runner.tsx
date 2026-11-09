@@ -169,7 +169,7 @@ function DetectorRunner(props: Props): JSX.Element {
         }
         if (model) {
             setModelLabels(model.labels);
-            if (!model.labels.length && model.kind !== ModelKind.REID) {
+            if (!model.labels.length && model.kind !== ModelKind.REID && !model.dynamicLabels) {
                 notification.warning({ message: 'This model does not have specified labels' });
             }
         } else {

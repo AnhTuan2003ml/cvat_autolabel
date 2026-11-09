@@ -120,6 +120,8 @@ class ModelHandler:
         with self.lock:
             model_prompts = [self._prompt_text(prompt) for prompt in prompts]
             if self.prompts != model_prompts:
+                if self.half:
+                    self.model.model.float()
                 self.model.set_classes(model_prompts)
                 self.prompts = list(model_prompts)
 
