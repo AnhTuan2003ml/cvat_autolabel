@@ -15,10 +15,10 @@ class ModelHandler:
     @staticmethod
     def _prompt_text(prompt):
         prompt_aliases = {
-            "car": "car, passenger car, sedan, automobile",
-            "truck": "truck, pickup truck, lorry, heavy truck",
-            "bus": "bus, city bus, coach bus, public transit bus",
-            "van": "van, minivan, cargo van, delivery van",
+            "car": "car",
+            "truck": "truck",
+            "bus": "bus",
+            "van": "van",
         }
         return prompt_aliases.get(prompt.lower(), prompt)
 
@@ -48,16 +48,30 @@ class ModelHandler:
                 kept.append(result)
         return kept
 
-    def _predict(self, image, prompts, threshold, offset=(0, 0)):
-        prediction = self.model.predict(
-            image,
-            imgsz=640,
-            conf=threshold,
-            iou=0.50,
-            device=self.device,
-            half=self.half,
-            verbose=False,
-        )[0]
+    def _predict(self, image, prompts, threshold, offset=(0, 0), image_size=640):
+        try:
+            prediction = self.model.predict(
+                image,
+                imgsz=image_size,
+                conf=threshold,
+                iou=0.50,
+                device=self.device,
+                half=self.half,
+                verbose=False,
+            )[0]
+        except RuntimeError as error:
+            if image_size == 640 or "out of memory" not in str(error).lower():
+                raise
+            torch.cuda.empty_cache()
+            prediction = self.model.predict(
+                image,
+                imgsz=640,
+                conf=threshold,
+                iou=0.50,
+                device=self.device,
+                half=self.half,
+                verbose=False,
+            )[0]
         boxes = prediction.boxes
         if boxes is None:
             return []
@@ -109,7 +123,7 @@ class ModelHandler:
                 self.model.set_classes(model_prompts)
                 self.prompts = list(model_prompts)
 
-            results = self._predict(image, prompts, threshold)
+            results = self._predict(image, prompts, threshold, image_size=960)
             width, height = image.size
             x_positions = self._tile_positions(width)
             y_positions = self._tile_positions(height)

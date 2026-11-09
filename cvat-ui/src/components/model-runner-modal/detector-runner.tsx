@@ -7,6 +7,7 @@ import './styles.scss';
 import React, { useEffect, useState } from 'react';
 import { Row, Col } from 'antd/lib/grid';
 import Select from 'antd/lib/select';
+import Input from 'antd/lib/input';
 import Text from 'antd/lib/typography/Text';
 import InputNumber from 'antd/lib/input-number';
 import Button from 'antd/lib/button';
@@ -88,7 +89,8 @@ function DetectorRunner(props: Props): JSX.Element {
     const [detectorThreshold, setDetectorThreshold] = useState<number | null>(null);
     const [modelLabels, setModelLabels] = useState<LabelInterface[]>([]);
     const [taskLabels, setTaskLabels] = useState<LabelInterface[]>([]);
-    const [textPrompts, setTextPrompts] = useState<string[]>([]);
+    const [selectedPromptLabels, setSelectedPromptLabels] = useState<string[]>([]);
+    const [promptDescriptions, setPromptDescriptions] = useState<Record<string, string>>({});
     const [regionOfInterest, setRegionOfInterest] = useState<RegionOfInterest>(null);
 
     const model = models.find((_model): boolean => _model.id === modelID);
@@ -100,7 +102,14 @@ function DetectorRunner(props: Props): JSX.Element {
         [LabelType.ANY, LabelType.MASK].includes(model.returnType);
     const promptLabels = taskLabels.filter((label) => [LabelType.RECTANGLE, LabelType.ANY].includes(label.type));
 
-    const buttonEnabled = model && (isReId || (isDynamicDetector ? textPrompts.length > 0 : isDetector && mapping.length));
+    const textPrompts = selectedPromptLabels
+        .map((label) => promptDescriptions[label]?.trim())
+        .filter((description): description is string => Boolean(description));
+    const buttonEnabled = model && (isReId || (isDynamicDetector ? (
+        selectedPromptLabels.length > 0 &&
+        textPrompts.length === selectedPromptLabels.length &&
+        new Set(textPrompts).size === textPrompts.length
+    ) : isDetector && mapping.length));
 
     useEffect(() => {
         if (!models.length) {
@@ -139,11 +148,13 @@ function DetectorRunner(props: Props): JSX.Element {
 
         setTaskLabels(converted);
         if (model?.dynamicLabels) {
-            setTextPrompts(converted
+            setSelectedPromptLabels(converted
                 .filter((label) => [LabelType.RECTANGLE, LabelType.ANY].includes(label.type))
                 .map((label) => label.name));
+            setPromptDescriptions({});
         } else {
-            setTextPrompts([]);
+            setSelectedPromptLabels([]);
+            setPromptDescriptions({});
         }
         if (model) {
             setModelLabels(model.labels);
@@ -219,11 +230,26 @@ function DetectorRunner(props: Props): JSX.Element {
                     </div>
                     <Select
                         mode='multiple'
-                        value={textPrompts}
+                        value={selectedPromptLabels}
                         style={{ width: '100%' }}
-                        onChange={(values: string[]) => setTextPrompts(values)}
+                        onChange={(values: string[]) => setSelectedPromptLabels(values)}
                         options={promptLabels.map((label) => ({ label: label.name, value: label.name }))}
                     />
+                    {selectedPromptLabels.map((label) => (
+                        <Row key={label} align='middle' style={{ marginTop: 8 }}>
+                            <Col span={7}><Text>{label}</Text></Col>
+                            <Col span={17}>
+                                <Input
+                                    value={promptDescriptions[label] || ''}
+                                    placeholder='Nhập mô tả chi tiết cho class'
+                                    onChange={(event) => setPromptDescriptions({
+                                        ...promptDescriptions,
+                                        [label]: event.target.value,
+                                    })}
+                                />
+                            </Col>
+                        </Row>
+                    ))}
                 </div>
             )}
             {isDetector && (
@@ -320,8 +346,8 @@ function DetectorRunner(props: Props): JSX.Element {
                         onClick={() => {
                             if (!model) return;
                             const serverMapping = isDynamicDetector ?
-                                Object.fromEntries(textPrompts.map((prompt) => [prompt, {
-                                    name: prompt,
+                                Object.fromEntries(selectedPromptLabels.map((label) => [promptDescriptions[label]?.trim() || '', {
+                                    name: label,
                                     attributes: {},
                                 }])) : convertMappingToServer(mapping);
                             if (model.kind === ModelKind.DETECTOR) {
