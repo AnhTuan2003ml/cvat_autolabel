@@ -137,7 +137,7 @@ class ModelHandler:
                             self._predict(
                                 tile,
                                 prompts,
-                                max(0.10, threshold * 0.65),
+                                max(0.08, threshold * 0.65),
                                 (left, top),
                             )
                         )
