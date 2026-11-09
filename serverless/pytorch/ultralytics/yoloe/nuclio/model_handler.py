@@ -6,7 +6,7 @@ from ultralytics import YOLOE
 
 class ModelHandler:
     def __init__(self):
-        self.model = YOLOE("yoloe-26l-seg.pt")
+        self.model = YOLOE("yoloe-26x-seg.pt")
         self.device = 0 if torch.cuda.is_available() else "cpu"
         self.half = torch.cuda.is_available()
         self.prompts = None
@@ -38,26 +38,16 @@ class ModelHandler:
                 kept.append(result)
         return kept
 
-    def infer(self, image, prompts, threshold):
-        prompts = [prompt.strip() for prompt in prompts if prompt and prompt.strip()]
-        if not prompts:
-            return []
-
-        with self.lock:
-            if self.prompts != prompts:
-                self.model.set_classes(prompts)
-                self.prompts = list(prompts)
-
-            prediction = self.model.predict(
-                image,
-                imgsz=640,
-                conf=threshold,
-                iou=0.50,
-                device=self.device,
-                half=self.half,
-                verbose=False,
-            )[0]
-
+    def _predict(self, image, prompts, threshold, offset=(0, 0)):
+        prediction = self.model.predict(
+            image,
+            imgsz=640,
+            conf=threshold,
+            iou=0.50,
+            device=self.device,
+            half=self.half,
+            verbose=False,
+        )[0]
         boxes = prediction.boxes
         if boxes is None:
             return []
@@ -75,10 +65,47 @@ class ModelHandler:
                 {
                     "type": "rectangle",
                     "label": prompts[prompt_index],
-                    "points": coordinates,
+                    "points": [
+                        coordinates[0] + offset[0],
+                        coordinates[1] + offset[1],
+                        coordinates[2] + offset[0],
+                        coordinates[3] + offset[1],
+                    ],
                     "confidence": float(confidence),
                     "attributes": [],
                 }
             )
+        return results
+
+    @staticmethod
+    def _tile_positions(length, tile_size=640, overlap=0.20):
+        if length <= tile_size:
+            return [0]
+        stride = max(1, int(tile_size * (1.0 - overlap)))
+        positions = list(range(0, length - tile_size + 1, stride))
+        last = length - tile_size
+        if positions[-1] != last:
+            positions.append(last)
+        return positions
+
+    def infer(self, image, prompts, threshold):
+        prompts = [prompt.strip() for prompt in prompts if prompt and prompt.strip()]
+        if not prompts:
+            return []
+
+        with self.lock:
+            if self.prompts != prompts:
+                self.model.set_classes(prompts)
+                self.prompts = list(prompts)
+
+            results = self._predict(image, prompts, threshold)
+            width, height = image.size
+            x_positions = self._tile_positions(width)
+            y_positions = self._tile_positions(height)
+            if len(x_positions) > 1 or len(y_positions) > 1:
+                for top in y_positions:
+                    for left in x_positions:
+                        tile = image.crop((left, top, left + 640, top + 640))
+                        results.extend(self._predict(tile, prompts, threshold, (left, top)))
 
         return self._deduplicate(results)

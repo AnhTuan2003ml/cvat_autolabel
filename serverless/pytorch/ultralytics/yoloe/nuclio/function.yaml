@@ -2,17 +2,17 @@ metadata:
   name: pytorch-ultralytics-yoloe
   namespace: cvat
   annotations:
-    name: YOLOE-26L Dynamic Auto Label
+    name: YOLOE-26X Multi-pass Auto Label
     type: detector
     dynamic_labels: "true"
     supported_shape_types: rectangle
     spec: |
       []
 spec:
-  description: YOLOE-26L open-vocabulary detector with task label text prompts
+  description: YOLOE-26X open-vocabulary detector with tiled task label text prompts
   runtime: python:3.10
   handler: main:handler
-  eventTimeout: 60s
+  eventTimeout: 180s
   resources:
     limits:
       nvidia.com/gpu: 1
@@ -32,7 +32,7 @@ spec:
         - kind: WORKDIR
           value: /opt/nuclio
         - kind: RUN
-          value: python -c "from ultralytics import YOLOE; model = YOLOE('yoloe-26l-seg.pt'); model.set_classes(['car', 'truck', 'bus', 'van'])"
+          value: python -c "from ultralytics import YOLOE; model = YOLOE('yoloe-26x-seg.pt'); model.set_classes(['car', 'truck', 'bus', 'van'])"
   triggers:
     myHttpTrigger:
       numWorkers: 1

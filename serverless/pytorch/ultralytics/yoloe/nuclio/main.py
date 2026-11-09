@@ -17,7 +17,7 @@ def handler(context, event):
         data = json.loads(data)
 
     image = Image.open(io.BytesIO(base64.b64decode(data["image"]))).convert("RGB")
-    threshold = float(data.get("threshold", 0.25))
+    threshold = float(data.get("threshold", 0.20))
     text_prompts = data.get("text_prompts") or ["car", "truck", "bus", "van"]
     results = context.user_data.model.infer(image, text_prompts, threshold)
 
