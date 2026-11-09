@@ -13,6 +13,16 @@ class ModelHandler:
         self.lock = Lock()
 
     @staticmethod
+    def _prompt_text(prompt):
+        prompt_aliases = {
+            "car": "car, passenger car, sedan, automobile",
+            "truck": "truck, pickup truck, lorry, heavy truck",
+            "bus": "bus, city bus, coach bus, public transit bus",
+            "van": "van, minivan, cargo van, delivery van",
+        }
+        return prompt_aliases.get(prompt.lower(), prompt)
+
+    @staticmethod
     def _overlap(first, second):
         left = max(first[0], second[0])
         top = max(first[1], second[1])
@@ -94,9 +104,10 @@ class ModelHandler:
             return []
 
         with self.lock:
-            if self.prompts != prompts:
-                self.model.set_classes(prompts)
-                self.prompts = list(prompts)
+            model_prompts = [self._prompt_text(prompt) for prompt in prompts]
+            if self.prompts != model_prompts:
+                self.model.set_classes(model_prompts)
+                self.prompts = list(model_prompts)
 
             results = self._predict(image, prompts, threshold)
             width, height = image.size
@@ -106,6 +117,13 @@ class ModelHandler:
                 for top in y_positions:
                     for left in x_positions:
                         tile = image.crop((left, top, left + 640, top + 640))
-                        results.extend(self._predict(tile, prompts, threshold, (left, top)))
+                        results.extend(
+                            self._predict(
+                                tile,
+                                prompts,
+                                max(0.10, threshold * 0.65),
+                                (left, top),
+                            )
+                        )
 
         return self._deduplicate(results)
