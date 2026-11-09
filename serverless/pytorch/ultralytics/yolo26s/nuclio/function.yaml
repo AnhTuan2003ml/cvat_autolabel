@@ -6,18 +6,7 @@ metadata:
     type: detector
     supported_shape_types: rectangle
     spec: |
-      - name: car
-        type: rectangle
-        attributes: []
-      - name: truck
-        type: rectangle
-        attributes: []
-      - name: bus
-        type: rectangle
-        attributes: []
-      - name: van
-        type: rectangle
-        attributes: []
+      [{"name":"car","type":"rectangle","attributes":[]},{"name":"truck","type":"rectangle","attributes":[]},{"name":"bus","type":"rectangle","attributes":[]},{"name":"van","type":"rectangle","attributes":[]}]
 spec:
   description: Fine-tuned YOLO26s detector for car, truck, bus and van
   runtime: python:3.10
