@@ -1,15 +1,25 @@
 metadata:
-  name: pytorch-ultralytics-yoloe
+  name: pytorch-ultralytics-yolo26s
   namespace: cvat
   annotations:
-    name: YOLOE Auto Label
+    name: YOLO26s Auto Label
     type: detector
-    dynamic_labels: "true"
     supported_shape_types: rectangle
     spec: |
-      []
+      - name: car
+        type: rectangle
+        attributes: []
+      - name: truck
+        type: rectangle
+        attributes: []
+      - name: bus
+        type: rectangle
+        attributes: []
+      - name: van
+        type: rectangle
+        attributes: []
 spec:
-  description: YOLOE open-vocabulary detector with task label text prompts
+  description: Fine-tuned YOLO26s detector for car, truck, bus and van
   runtime: python:3.10
   handler: main:handler
   eventTimeout: 60s
@@ -17,22 +27,18 @@ spec:
     limits:
       nvidia.com/gpu: 1
   build:
-    image: cvat.pytorch.ultralytics.yoloe
+    image: cvat.pytorch.ultralytics.yolo26s
     baseImage: nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
     directives:
       preCopy:
         - kind: RUN
-          value: apt-get update && apt-get install --no-install-recommends -y git python3 python3-pip python-is-python3 libglib2.0-0 libgl1 libxcb1 && rm -rf /var/lib/apt/lists/*
+          value: apt-get update && apt-get install --no-install-recommends -y python3 python3-pip python-is-python3 libglib2.0-0 libgl1 libxcb1 && rm -rf /var/lib/apt/lists/*
         - kind: RUN
           value: pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu124
         - kind: RUN
           value: pip install --no-cache-dir ultralytics==8.4.0 pillow
-        - kind: RUN
-          value: pip install --no-cache-dir git+https://github.com/openai/CLIP.git
         - kind: WORKDIR
           value: /opt/nuclio
-        - kind: RUN
-          value: python -c "from ultralytics import YOLOE; model = YOLOE('yoloe-26l-seg.pt'); model.set_classes(['car', 'truck', 'bus', 'van'])"
   triggers:
     myHttpTrigger:
       numWorkers: 1
