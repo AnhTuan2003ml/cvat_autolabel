@@ -51,7 +51,7 @@ function AutomaticAnnotationProgress(props: Props): JSX.Element | null {
                             if (activeInference.status === RQStatus.STARTED) {
                                 return (
                                     <>
-                                        Automatic annotation is in progress
+                                        Automatic annotation is in progress ({Math.floor(activeInference.progress)}%)
                                         <LoadingOutlined />
                                     </>
                                 );
@@ -75,7 +75,7 @@ function AutomaticAnnotationProgress(props: Props): JSX.Element | null {
                         from: '#108ee9',
                         to: '#87d068',
                     }}
-                    showInfo={false}
+                    showInfo
                     size='small'
                 />
             </Col>
