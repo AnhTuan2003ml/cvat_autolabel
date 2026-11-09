@@ -10,6 +10,7 @@ import Select from 'antd/lib/select';
 import Text from 'antd/lib/typography/Text';
 import InputNumber from 'antd/lib/input-number';
 import Button from 'antd/lib/button';
+import Switch from 'antd/lib/switch';
 import notification from 'antd/lib/notification';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 
