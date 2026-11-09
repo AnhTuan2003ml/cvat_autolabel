@@ -47,10 +47,10 @@ type ServerMapping = Record<string, {
 }>;
 
 const defaultPromptDescriptions: Record<string, string> = {
-    car: 'Xe ô tô con, bao gồm sedan, hatchback, SUV, taxi và xe bán tải (pickup). Không bao gồm xe tải lớn, xe buýt, xe máy.',
-    truck: 'Xe tải vận chuyển hàng hóa, xe tải thùng, xe tải nặng, xe đầu kéo và xe container. Không gán xe bán tải nhỏ thuộc nhóm car.',
-    bus: 'Xe buýt và xe khách, bao gồm minibus được sử dụng để vận chuyển hành khách. Không bao gồm van hoặc minivan thông thường.',
-    van: 'Xe van, minivan có thân xe dạng hộp, dùng chở người hoặc hàng hóa. Không bao gồm xe buýt lớn và xe con thông thường.',
+    car: 'Passenger car including sedan, hatchback, SUV, taxi and pickup truck. Exclude large trucks, buses and motorcycles.',
+    truck: 'Cargo transport truck including box truck, heavy truck, tractor-trailer and container truck. Do not label small pickup trucks as truck.',
+    bus: 'Passenger bus and coach, including minibus used to transport passengers. Exclude ordinary vans and minivans.',
+    van: 'Box-shaped van or minivan used to carry people or cargo. Exclude large buses and ordinary passenger cars.',
 };
 
 export interface AnnotateTaskRequestBody {

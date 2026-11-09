@@ -10,10 +10,11 @@ import Modal from 'antd/lib/modal';
 import notification from 'antd/lib/notification';
 
 import { ThunkDispatch } from 'utils/redux';
-import { modelsActions, startInferenceAsync } from 'actions/models-actions';
+import { cancelInferenceAsync, modelsActions, startInferenceAsync } from 'actions/models-actions';
 import CVATLoadingSpinner from 'components/common/loading-spinner';
-import { CombinedState } from 'reducers';
+import { ActiveInference, CombinedState } from 'reducers';
 import MLModel from 'cvat-core/src/ml-model';
+import AutomaticAnnotationProgress from 'components/tasks-page/automatic-annotation-progress';
 import { getCore, Task } from 'cvat-core-wrapper';
 import DetectorRunner from './detector-runner';
 
@@ -24,11 +25,13 @@ interface StateToProps {
     task: any;
     detectors: MLModel[];
     reid: MLModel[];
+    activeInference: ActiveInference | null;
 }
 
 interface DispatchToProps {
     runInference(task: any, model: MLModel, body: object): void;
     closeDialog(): void;
+    cancelInference(taskID: number): void;
 }
 
 function mapStateToProps(state: CombinedState): StateToProps {
@@ -40,6 +43,7 @@ function mapStateToProps(state: CombinedState): StateToProps {
         task: models.modelRunnerTask,
         reid,
         detectors,
+        activeInference: models.modelRunnerTask ? models.inferences[models.modelRunnerTask.id] || null : null,
     };
 }
 
@@ -51,12 +55,15 @@ function mapDispatchToProps(dispatch: ThunkDispatch): DispatchToProps {
         closeDialog() {
             dispatch(modelsActions.closeRunModelDialog());
         },
+        cancelInference(taskID: number) {
+            dispatch(cancelInferenceAsync(taskID));
+        },
     };
 }
 
 function ModelRunnerDialog(props: StateToProps & DispatchToProps): JSX.Element {
     const {
-        reid, detectors, task, visible, runInference, closeDialog,
+        reid, detectors, task, visible, runInference, closeDialog, cancelInference, activeInference,
     } = props;
 
     const models = [...reid, ...detectors];
@@ -84,16 +91,21 @@ function ModelRunnerDialog(props: StateToProps & DispatchToProps): JSX.Element {
             title='Automatic annotation'
         >
             { taskInstance ? (
-                <DetectorRunner
-                    withCleanup
-                    models={models}
-                    labels={taskInstance.labels}
-                    dimension={taskInstance.dimension}
-                    runInference={(...args) => {
-                        closeDialog();
-                        runInference(taskInstance.id, ...args);
-                    }}
-                />
+                <>
+                    <DetectorRunner
+                        withCleanup
+                        models={models}
+                        labels={taskInstance.labels}
+                        dimension={taskInstance.dimension}
+                        runInference={(...args) => {
+                            runInference(taskInstance.id, ...args);
+                        }}
+                    />
+                    <AutomaticAnnotationProgress
+                        activeInference={activeInference}
+                        cancelAutoAnnotation={() => cancelInference(taskInstance.id)}
+                    />
+                </>
             ) : <CVATLoadingSpinner /> }
         </Modal>
     );
