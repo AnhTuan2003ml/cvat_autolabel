@@ -104,6 +104,19 @@ function DetectorRunner(props: Props): JSX.Element {
     const buttonEnabled = model && (isReId || (isDynamicDetector ? textPrompts.length > 0 : isDetector && mapping.length));
 
     useEffect(() => {
+        if (!models.length) {
+            setModelID(null);
+            return;
+        }
+
+        if (!modelID || !models.some((_model) => _model.id === modelID)) {
+            const defaultModel = models.find((_model) => _model.dynamicLabels) ||
+                models.find((_model) => _model.kind === ModelKind.DETECTOR) || models[0];
+            setModelID(defaultModel.id);
+        }
+    }, [models, modelID]);
+
+    useEffect(() => {
         const converted = labels.map((label) => ({
             name: label.name,
             type: label.type,
@@ -168,6 +181,7 @@ function DetectorRunner(props: Props): JSX.Element {
                         dropdownRender={(menu) => <ModelSelectorDropdownContent>{menu}</ModelSelectorDropdownContent>}
                         placeholder={dimension === DimensionType.DIMENSION_2D ? 'Select a model' : 'No models available'}
                         disabled={dimension !== DimensionType.DIMENSION_2D}
+                        value={modelID ?? undefined}
                         style={{ width: '100%' }}
                         onChange={(_modelID: string): void => {
                             setModelID(_modelID);
