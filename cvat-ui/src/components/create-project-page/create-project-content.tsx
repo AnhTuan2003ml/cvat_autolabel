@@ -178,7 +178,7 @@ export default function CreateProjectContent(): JSX.Element {
     const onSubmitAndOpen = async (): Promise<void> => {
         const createdProject = await submit();
         if (createdProject) {
-            history.push(`/projects/${createdProject.id}`);
+            history.push(`/tasks/create?projectId=${createdProject.id}`);
         }
     };
 
