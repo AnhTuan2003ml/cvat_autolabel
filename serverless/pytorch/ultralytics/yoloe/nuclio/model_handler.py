@@ -1,16 +1,15 @@
 from threading import Lock
 
 import torch
-from ultralytics import YOLO
+from ultralytics import YOLOE
 
 
 class ModelHandler:
-    labels = ["car", "truck", "bus", "van"]
-
     def __init__(self):
-        self.model = YOLO("best.pt")
+        self.model = YOLOE("yoloe-26l-seg.pt")
         self.device = 0 if torch.cuda.is_available() else "cpu"
         self.half = torch.cuda.is_available()
+        self.prompts = None
         self.lock = Lock()
 
     @staticmethod
@@ -23,10 +22,8 @@ class ModelHandler:
         first_area = max(0.0, first[2] - first[0]) * max(0.0, first[3] - first[1])
         second_area = max(0.0, second[2] - second[0]) * max(0.0, second[3] - second[1])
         union = first_area + second_area - intersection
-        iou = intersection / union if union else 0.0
         smaller_area = min(first_area, second_area)
-        containment = intersection / smaller_area if smaller_area else 0.0
-        return iou, containment
+        return intersection / union if union else 0.0, intersection / smaller_area if smaller_area else 0.0
 
     @classmethod
     def _deduplicate(cls, results):
@@ -41,8 +38,16 @@ class ModelHandler:
                 kept.append(result)
         return kept
 
-    def infer(self, image, threshold):
+    def infer(self, image, prompts, threshold):
+        prompts = [prompt.strip() for prompt in prompts if prompt and prompt.strip()]
+        if not prompts:
+            return []
+
         with self.lock:
+            if self.prompts != prompts:
+                self.model.set_classes(prompts)
+                self.prompts = list(prompts)
+
             prediction = self.model.predict(
                 image,
                 imgsz=640,
@@ -63,13 +68,13 @@ class ModelHandler:
             boxes.conf.cpu().tolist(),
             boxes.cls.cpu().tolist(),
         ):
-            index = int(class_id)
-            if index >= len(self.labels):
+            prompt_index = int(class_id)
+            if prompt_index >= len(prompts):
                 continue
             results.append(
                 {
                     "type": "rectangle",
-                    "label": self.labels[index],
+                    "label": prompts[prompt_index],
                     "points": coordinates,
                     "confidence": float(confidence),
                     "attributes": [],
