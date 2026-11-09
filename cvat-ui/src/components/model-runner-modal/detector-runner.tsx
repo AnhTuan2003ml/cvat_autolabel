@@ -46,6 +46,13 @@ type ServerMapping = Record<string, {
     sublabels?: ServerMapping;
 }>;
 
+const defaultPromptDescriptions: Record<string, string> = {
+    car: 'Xe ô tô con, bao gồm sedan, hatchback, SUV, taxi và xe bán tải (pickup). Không bao gồm xe tải lớn, xe buýt, xe máy.',
+    truck: 'Xe tải vận chuyển hàng hóa, xe tải thùng, xe tải nặng, xe đầu kéo và xe container. Không gán xe bán tải nhỏ thuộc nhóm car.',
+    bus: 'Xe buýt và xe khách, bao gồm minibus được sử dụng để vận chuyển hành khách. Không bao gồm van hoặc minivan thông thường.',
+    van: 'Xe van, minivan có thân xe dạng hộp, dùng chở người hoặc hàng hóa. Không bao gồm xe buýt lớn và xe con thông thường.',
+};
+
 export interface AnnotateTaskRequestBody {
     type: 'annotate_task';
     mapping: ServerMapping;
@@ -151,7 +158,11 @@ function DetectorRunner(props: Props): JSX.Element {
             setSelectedPromptLabels(converted
                 .filter((label) => [LabelType.RECTANGLE, LabelType.ANY].includes(label.type))
                 .map((label) => label.name));
-            setPromptDescriptions({});
+            setPromptDescriptions(Object.fromEntries(
+                converted
+                    .filter((label) => [LabelType.RECTANGLE, LabelType.ANY].includes(label.type))
+                    .map((label) => [label.name, defaultPromptDescriptions[label.name] || '']),
+            ));
         } else {
             setSelectedPromptLabels([]);
             setPromptDescriptions({});
