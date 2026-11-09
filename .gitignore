@@ -81,3 +81,7 @@ cvat-ui/dist
 **/!.yarn/releases
 **/!.yarn/sdks
 **/!.yarn/versions
+
+.docker-deploy/
+graphify-out/
+CVAT_GRAPH_TREE.html
