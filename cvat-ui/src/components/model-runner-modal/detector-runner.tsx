@@ -10,7 +10,6 @@ import Select from 'antd/lib/select';
 import Text from 'antd/lib/typography/Text';
 import InputNumber from 'antd/lib/input-number';
 import Button from 'antd/lib/button';
-import Switch from 'antd/lib/switch';
 import notification from 'antd/lib/notification';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 
@@ -76,14 +75,13 @@ function convertMappingToServer(mapping: FullMapping): ServerMapping {
 
 function DetectorRunner(props: Props): JSX.Element {
     const {
-        models, withCleanup, labels, dimension, runInference,
+        models, labels, dimension, runInference,
         frameWidth, frameHeight, canvasInstance, onRegionOfInterestChange,
     } = props;
 
     const [modelID, setModelID] = useState<string | null>(null);
     const [threshold, setThreshold] = useState<number>(0.5);
     const [distance, setDistance] = useState<number>(50);
-    const [cleanup, setCleanup] = useState<boolean>(false);
     const [mapping, setMapping] = useState<FullMapping>([]);
     const [convertMasksToPolygons, setConvertMasksToPolygons] = useState<boolean>(false);
     const [detectorThreshold, setDetectorThreshold] = useState<number | null>(null);
@@ -269,15 +267,6 @@ function DetectorRunner(props: Props): JSX.Element {
                     <Text>Convert masks to polygons</Text>
                 </div>
             )}
-            {isDetector && withCleanup && (
-                <div className='cvat-detector-runner-clean-previous-annotations-wrapper'>
-                    <Switch
-                        checked={cleanup}
-                        onChange={(checked: boolean): void => setCleanup(checked)}
-                    />
-                    <Text>Clean previous annotations</Text>
-                </div>
-            )}
             {isReId ? (
                 <div>
                     <Row align='middle' justify='start'>
@@ -338,7 +327,7 @@ function DetectorRunner(props: Props): JSX.Element {
                                 const body: AnnotateTaskRequestBody = {
                                     type: 'annotate_task',
                                     mapping: serverMapping,
-                                    cleanup,
+                                    cleanup: true,
                                     conv_mask_to_poly: convertMasksToPolygons,
                                     ...(detectorThreshold !== null ? { threshold: detectorThreshold } : {}),
                                     ...(regionOfInterest ? { roi: regionOfInterest } : {}),
